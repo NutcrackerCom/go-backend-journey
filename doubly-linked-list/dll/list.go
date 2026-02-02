@@ -78,21 +78,22 @@ func (list *List) Pop_back() {
 }
 
 func (list *List) Insert(position int, str string) {
-	if position > list.size {
+	if position > list.size || position < 0 {
 		return
 	}
-	if position == 0 {
+	switch position {
+	case 0:
 		list.Push_front(str)
-	} else if position == list.size {
+	case list.size:
 		list.Push_back(str)
-	} else {
+	default:
 		var node Node = Node{
 			next: nil,
 			prev: nil,
 			val:  str,
 		}
 		current := list.head
-		for i := 0; i < position; i++ {
+		for i := 0; i < position-1; i++ {
 			current = current.next
 		}
 		next := current.next
@@ -101,4 +102,26 @@ func (list *List) Insert(position int, str string) {
 		node.next = next
 		next.prev = &node
 	}
+	list.size++
+}
+
+func (list *List) Erase(position int) {
+	if position >= list.size || position < 0 {
+		return
+	}
+	switch position {
+	case 0:
+		list.Pop_front()
+	case list.size - 1:
+		list.Pop_back()
+	default:
+		current := list.head
+		for i := 0; i < position; i++ {
+			current = current.next
+		}
+		next := current.next
+		current.prev.next = next
+		next.prev = current.prev
+	}
+	list.size--
 }
