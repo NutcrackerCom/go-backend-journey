@@ -22,7 +22,7 @@ type List struct {
 	size int
 }
 
-func (list *List) push_back(str string) {
+func (list *List) Push_back(str string) {
 	var node Node = Node{
 		next: nil,
 		prev: nil,
@@ -38,7 +38,7 @@ func (list *List) push_back(str string) {
 	list.size++
 }
 
-func (list *List) push_front(str string) {
+func (list *List) Push_front(str string) {
 	var node Node = Node{
 		next: nil,
 		prev: nil,
@@ -62,14 +62,14 @@ func (list *List) PrintNode() {
 	}
 }
 
-func (list *List) pop_front() {
+func (list *List) Pop_front() {
 	if list.head != nil {
 		list.head = list.head.next
 		list.size--
 	}
 }
 
-func (list *List) pop_back() {
+func (list *List) Pop_back() {
 	if list.head != nil {
 		list.tail = list.tail.prev
 		list.tail.next = nil
@@ -77,14 +77,14 @@ func (list *List) pop_back() {
 	}
 }
 
-func (list *List) insert(position int, str string) {
+func (list *List) Insert(position int, str string) {
 	if position > list.size {
 		return
 	}
 	if position == 0 {
-		list.push_front(str)
+		list.Push_front(str)
 	} else if position == list.size {
-		list.push_back(str)
+		list.Push_back(str)
 	} else {
 		var node Node = Node{
 			next: nil,
