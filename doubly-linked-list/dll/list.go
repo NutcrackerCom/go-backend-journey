@@ -1,6 +1,8 @@
 package dll
 
-import "fmt"
+import (
+	"fmt"
+)
 
 /*
 
@@ -124,4 +126,21 @@ func (list *List) Erase(position int) {
 		next.prev = current.prev
 	}
 	list.size--
+}
+
+func (list *List) Revert() {
+	if list.size <= 1 {
+		return
+	}
+	current := list.head
+	var prev *Node = nil
+	var next *Node = nil
+	for current != nil {
+		next = current.next
+		current.next = prev
+		current.prev = next
+		prev = current
+		current = next
+	}
+	list.head = prev
 }

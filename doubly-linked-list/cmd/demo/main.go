@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/NutcrackerCom/go-backend-journey/doubly-linked-list/dll"
 )
 
@@ -10,5 +12,8 @@ func main() {
 	list.Push_back("two")
 	list.Push_back("three")
 	list.Push_back("four")
+	list.PrintNode()
+	fmt.Println("=======")
+	list.Revert()
 	list.PrintNode()
 }
