@@ -2,24 +2,18 @@ package main
 
 import (
 	"fmt"
-	"sync"
 
-	"github.com/NutcrackerCom/go-backend-journey/mini-projects/account"
+	"github.com/NutcrackerCom/go-backend-journey/mini-projects/account/internal/bank"
+	"github.com/NutcrackerCom/go-backend-journey/mini-projects/account/internal/logger"
 )
 
 func main() {
-	//var logger account.ConsoleLogger
-	wg := new(sync.WaitGroup)
-	var accUserA account.Account = account.Account{Owner: "A", Balance: 100000}
-	var accUserB account.Account = account.Account{Owner: "B", Balance: 100}
-	for i := 0; i < 10000; i++ {
-		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
-			defer wg.Done()
-			accUserA.Transfer(&accUserB, 10)
-		}(wg)
-	}
-
-	wg.Wait()
-	fmt.Println(accUserA, accUserB)
+	var logg logger.ConsoleLogger = logger.ConsoleLogger{}
+	var service bank.Service = *bank.NewService(logg)
+	service.Create(0, "A", 100)
+	service.Create(1, "B", 100)
+	service.Transfer(0, 1, 50)
+	acc0, _ := service.Get(0)
+	acc1, _ := service.Get(0)
+	fmt.Println(acc0, acc1)
 }
