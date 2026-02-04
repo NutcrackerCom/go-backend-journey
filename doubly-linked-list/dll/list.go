@@ -72,6 +72,11 @@ func (list *List) Pop_front() {
 }
 
 func (list *List) Pop_back() {
+	if list.size == 1 {
+		list.head = nil
+		list.tail = nil
+		list.size--
+	}
 	if list.head != nil {
 		list.tail = list.tail.prev
 		list.tail.next = nil
@@ -103,8 +108,8 @@ func (list *List) Insert(position int, str string) {
 		node.prev = current
 		node.next = next
 		next.prev = &node
+		list.size++
 	}
-	list.size++
 }
 
 func (list *List) Erase(position int) {
@@ -124,14 +129,15 @@ func (list *List) Erase(position int) {
 		next := current.next
 		current.prev.next = next
 		next.prev = current.prev
+		list.size--
 	}
-	list.size--
 }
 
 func (list *List) Revert() {
 	if list.size <= 1 {
 		return
 	}
+	newTail := list.head
 	current := list.head
 	var prev *Node = nil
 	var next *Node = nil
@@ -143,4 +149,22 @@ func (list *List) Revert() {
 		current = next
 	}
 	list.head = prev
+	list.tail = newTail
+}
+
+func (list *List) Copy() List {
+	var copyList List
+	if list.size == 0 {
+		return copyList
+	}
+	current := list.head
+	for current != nil {
+		copyList.Push_back(current.val)
+		current = current.next
+	}
+	return copyList
+}
+
+func (list *List) GetSize() int {
+	return list.size
 }
