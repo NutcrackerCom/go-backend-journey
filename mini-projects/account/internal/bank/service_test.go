@@ -8,7 +8,7 @@ import (
 func TestDeposit_Positive(t *testing.T) {
 	accounts := NewService(nil)
 	accounts.Create(0, "A", 100)
-	err := accounts.Deposit(0, 50)
+	err := accounts.deposit(0, 50)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -22,7 +22,7 @@ func TestDeposit_NegativeAmount(t *testing.T) {
 	accounts := NewService(nil)
 	accounts.Create(0, "A", 100)
 
-	err := accounts.Deposit(0, -10)
+	err := accounts.deposit(0, -10)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
@@ -34,7 +34,7 @@ func TestDeposit_NegativeAmount(t *testing.T) {
 func TestWithdraw_EnoughFunds(t *testing.T) {
 	accounts := NewService(nil)
 	accounts.Create(0, "A", 100)
-	err := accounts.Withdraw(0, 60)
+	err := accounts.withdraw(0, 60)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -47,7 +47,7 @@ func TestWithdraw_NotEnoughFunds(t *testing.T) {
 	accounts := NewService(nil)
 	accounts.Create(0, "A", 50)
 
-	err := accounts.Withdraw(0, 60)
+	err := accounts.withdraw(0, 60)
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
@@ -94,14 +94,14 @@ func TestTransfer_NilAccount(t *testing.T) {
 	accounts.Create(0, "A", 20)
 	err := accounts.Transfer(0, 1, 30)
 	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected error ErrUnExsisingUser, got %v", err)
+		t.Fatalf("expected error ErrNotFound, got %v", err)
 	}
 }
 
 func TestDeposit_Zero(t *testing.T) {
 	accounts := NewService(nil)
 	accounts.Create(0, "A", 20)
-	err := accounts.Deposit(0, 0)
+	err := accounts.deposit(0, 0)
 	if !errors.Is(err, ErrInvalidAmount) {
 		t.Fatalf("expected error ErrInvalidAmount, got %v", err)
 	}
@@ -110,7 +110,7 @@ func TestDeposit_Zero(t *testing.T) {
 func TestWithdraw_Zero(t *testing.T) {
 	accounts := NewService(nil)
 	accounts.Create(0, "A", 20)
-	err := accounts.Withdraw(0, 0)
+	err := accounts.withdraw(0, 0)
 	if !errors.Is(err, ErrInvalidAmount) {
 		t.Fatalf("expected error ErrInvalidAmount, got %v", err)
 	}

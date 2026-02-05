@@ -38,89 +38,137 @@ type Service struct {
 	log     logger.Logger
 }
 
-func (accounts *Service) Create(id int, owner string, initialBalance int64) error {
-
-	if _, ok := accounts.account[id]; ok {
-		accounts.log.Error("Eror: Try to create existing account")
+func (s *Service) Create(id int, owner string, initialBalance int64) error {
+	if initialBalance < 0 {
+		s.log.Error("Eror: initialBalance less then zero")
+		return ErrInvalidAmount
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.account[id]; ok {
+		s.log.Error("Eror: Try to create existing account")
 		return ErrAlreadyExists
 	}
-	if _, ok := accounts.locks[id]; ok {
-		accounts.log.Error("Eror: Try to create existing locks")
+	if _, ok := s.locks[id]; ok {
+		s.log.Error("Eror: Try to create existing locks")
 		return ErrAlreadyExistsLock
 	}
-	if initialBalance < 0 {
-		accounts.log.Error("Eror: initialBalance less then zero")
-		return ErrInvalidAmount
-	}
 	user := model.Account{Id: id, Owner: owner, Balance: initialBalance}
-	accounts.account[id] = &user
-	accounts.locks[id] = &sync.Mutex{}
+	s.account[id] = &user
+	s.locks[id] = &sync.Mutex{}
 	return nil
 }
 
-func (accounts *Service) Get(id int) (model.Account, error) {
-	user, ok := accounts.account[id]
-	if ok {
-		return *user, nil
-	} else {
+func (s *Service) Get(id int) (model.Account, error) {
+	s.mu.RLock()
+	user, ok := s.account[id]
+	lock := s.locks[id]
+	s.mu.RUnlock()
+	if !ok || lock == nil {
 		return model.Account{}, ErrNotFound
 	}
+	lock.Lock()
+	acc := *user
+	lock.Unlock()
+	return acc, nil
 }
 
-func (accounts *Service) Deposit(id int, amount int64) error {
-	if _, ok := accounts.account[id]; !ok {
-		accounts.log.Error("Eror: user do not exists")
-		return ErrNotFound
+func (s *Service) getLockAndAcc(accId int) (*sync.Mutex, *model.Account, error) {
+	s.mu.RLock()
+	acc, ok_acc := s.account[accId]
+	lock, ok_lock := s.locks[accId]
+	s.mu.RUnlock()
+	if acc == nil || !ok_acc {
+		return nil, nil, ErrNotFound
 	}
+	if lock == nil || !ok_lock {
+		return nil, nil, ErrNotFound
+	}
+	return lock, acc, nil
+}
+
+func (s *Service) deposit(id int, amount int64) error {
+	lock, user, err := s.getLockAndAcc(id)
+	if err != nil {
+		return err
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	return s.depositLocked(user, amount)
+}
+
+func (s *Service) depositLocked(user *model.Account, amount int64) error {
 	if amount <= 0 {
-		accounts.log.Error("Deposit failed")
+		s.log.Error("Deposit failed")
 		return ErrInvalidAmount
 	}
-	accounts.account[id].Balance += amount
+
+	user.Balance += amount
+	s.log.Info("Deposit ok")
 	return nil
 }
 
-func (accounts *Service) Withdraw(id int, amount int64) error {
-	user, ok := accounts.account[id]
-	if !ok {
-		accounts.log.Error("Eror: user do not exists")
-		return ErrNotFound
+func (s *Service) withdraw(id int, amount int64) error {
+	lock, user, err := s.getLockAndAcc(id)
+	if err != nil {
+		return err
 	}
+	lock.Lock()
+	defer lock.Unlock()
+	return s.withdrawLocked(user, amount)
+}
+
+func (s *Service) withdrawLocked(user *model.Account, amount int64) error {
 	if amount <= 0 {
-		accounts.log.Error("Withdraw failed")
+		s.log.Error("Withdraw failed")
 		return ErrInvalidAmount
 	}
+
 	if user.Balance < amount {
-		accounts.log.Error("Withdraw failed")
+		s.log.Error("Withdraw failed")
 		return ErrInsufficientFunds
 	}
+
 	user.Balance -= amount
-	accounts.log.Info("Withdraw ok")
+	s.log.Info("Withdraw ok")
 	return nil
 }
 
-func (accounts *Service) Transfer(from_id int, to_id int, amount int64) error {
-	if from_id == to_id {
-		accounts.log.Error("Eror: duplicate from id = %d to id = %d ", from_id, to_id)
+func (s *Service) Transfer(fromId int, toId int, amount int64) error {
+	if fromId == toId {
+		s.log.Error("Eror: duplicate from id = %d to id = %d ", fromId, toId)
 		return ErrDuplicateId
 	}
-	if _, ok := accounts.account[from_id]; !ok {
-		accounts.log.Error("Eror: user with id = %d do not exists", from_id)
-		return ErrNotFound
-	}
-	if _, ok := accounts.account[to_id]; !ok {
-		accounts.log.Error("Eror: user with id = %d do not exists", to_id)
-		return ErrNotFound
-	}
-	if err := accounts.Withdraw(from_id, amount); err != nil {
-		accounts.log.Error("Transfer failed")
+
+	fromLock, userFrom, err := s.getLockAndAcc(fromId)
+	if err != nil {
 		return err
 	}
-	if err := accounts.Deposit(to_id, amount); err != nil {
-		accounts.Deposit(from_id, amount)
-		accounts.log.Error("Transfer failed")
+
+	toLock, userTo, err := s.getLockAndAcc(toId)
+	if err != nil {
 		return err
 	}
-	accounts.log.Info("Transfer ok")
+
+	firstLock, secondLock := fromLock, toLock
+	if fromId > toId {
+		secondLock, firstLock = fromLock, toLock
+	}
+
+	firstLock.Lock()
+	defer firstLock.Unlock()
+	secondLock.Lock()
+	defer secondLock.Unlock()
+
+	if err := s.withdrawLocked(userFrom, amount); err != nil {
+		s.log.Error("Transfer failed")
+		return err
+	}
+	if err := s.depositLocked(userTo, amount); err != nil {
+		s.depositLocked(userFrom, amount)
+		s.log.Error("Transfer failed")
+		return err
+	}
+	s.log.Info("Transfer ok")
 	return nil
 }
