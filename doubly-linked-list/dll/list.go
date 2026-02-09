@@ -24,7 +24,7 @@ type List struct {
 	size int
 }
 
-func (list *List) Push_back(str string) {
+func (list *List) Push_back(str string) *Node {
 	var node Node = Node{
 		next: nil,
 		prev: nil,
@@ -38,6 +38,7 @@ func (list *List) Push_back(str string) {
 	}
 	list.tail = &node
 	list.size++
+	return &node
 }
 
 func (list *List) Push_front(str string) {
@@ -62,6 +63,10 @@ func (list *List) PrintNode() {
 		fmt.Println(current.val)
 		current = current.next
 	}
+}
+
+func GetNode(node *Node) string {
+	return node.val
 }
 
 func (list *List) Pop_front() {
@@ -167,4 +172,18 @@ func (list *List) Copy() List {
 
 func (list *List) GetSize() int {
 	return list.size
+}
+
+func Next(node *Node) *Node {
+	if node != nil {
+		return node.next
+	}
+	return nil
+}
+
+func Prev(node *Node) *Node {
+	if node != nil {
+		return node.prev
+	}
+	return nil
 }
