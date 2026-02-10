@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -33,5 +34,20 @@ func FindAll(r io.Reader, pattern string) ([]Match, error) {
 		return match, err
 	}
 	return match, nil
+}
 
+func FindInFile(path string, pattern string) ([]Match, error) {
+	if pattern == "" {
+		return nil, ErrEmptyPattern
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	matches, err := FindAll(file, pattern)
+	if err != nil {
+		return nil, err
+	}
+	return matches, nil
 }

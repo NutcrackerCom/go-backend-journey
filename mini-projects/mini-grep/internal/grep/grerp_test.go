@@ -2,6 +2,7 @@ package grep
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 )
@@ -18,7 +19,7 @@ func compare(answer []Match, ideal []Match) bool {
 	return true
 }
 
-func TestEmptyPatern(t *testing.T) {
+func TestEmptyPattern(t *testing.T) {
 	patern := ""
 	r := strings.NewReader("hello\ngo\nworld\ngo go\n")
 	matches, err := FindAll(r, patern)
@@ -30,7 +31,18 @@ func TestEmptyPatern(t *testing.T) {
 	}
 }
 
-func TestNormalPatern(t *testing.T) {
+func TestEmptyPatternFile(t *testing.T) {
+	patern := ""
+	matches, err := FindInFile("", patern)
+	if !errors.Is(err, ErrEmptyPattern) {
+		t.Fatalf("expected %v error, got %v", ErrEmptyPattern, err)
+	}
+	if matches != nil {
+		t.Fatalf("expected nil matches")
+	}
+}
+
+func TestNormalPattern(t *testing.T) {
 	patern := "go"
 	r := strings.NewReader("hello\ngo\nworld\ngo go\n")
 	answer := []Match{{2, "go"}, {4, "go go"}}
@@ -40,6 +52,25 @@ func TestNormalPatern(t *testing.T) {
 	}
 	if !compare(matches, answer) {
 		t.Fatal("got wrong Mathes")
+	}
+}
+
+func TestNormalFile(t *testing.T) {
+	patern := "go"
+	file, err := os.CreateTemp("", "mini-grep-*.txt")
+	if err != nil {
+		t.Fatalf("got error in openning file %v", err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+	file.Write([]byte("hello\ngo\nworld\ngo go\n"))
+	answer := []Match{{2, "go"}, {4, "go go"}}
+	matches, err := FindInFile(file.Name(), patern)
+	if err != nil {
+		t.Fatalf("expected nil error? got %v", err)
+	}
+	if !compare(matches, answer) {
+		t.Fatal("got wrong Mathes", matches)
 	}
 }
 
@@ -53,5 +84,23 @@ func TestEmptyAnswer(t *testing.T) {
 	}
 	if !compare(matches, answer) {
 		t.Fatal("got wrong Mathes")
+	}
+}
+
+func TestEmptyFile(t *testing.T) {
+	patern := "go"
+	file, err := os.CreateTemp("", "mini-grep-*.txt")
+	if err != nil {
+		t.Fatalf("got error in openning file %v", err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+	answer := []Match{}
+	matches, err := FindInFile(file.Name(), patern)
+	if err != nil {
+		t.Fatalf("expected nil error? got %v", err)
+	}
+	if !compare(matches, answer) {
+		t.Fatal("got wrong Mathes", matches)
 	}
 }
