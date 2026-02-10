@@ -8,10 +8,10 @@ import (
 
 func main() {
 	//r := strings.NewReader("hello\ngo\nworld\ngo go\n")
-	matches, err := grep.FindInFile("/home/chernyshev/sd.txt", "go")
+	matches, err := grep.FindInDir("", "go")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(matches)
+	fmt.Printf("%+v", matches)
 }

@@ -5,12 +5,18 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 var (
 	ErrEmptyPattern = errors.New("empty pattern")
 )
+
+type FileMatch struct {
+	Path    string
+	Matches []Match
+}
 
 type Match struct {
 	Line int
@@ -50,4 +56,30 @@ func FindInFile(path string, pattern string) ([]Match, error) {
 		return nil, err
 	}
 	return matches, nil
+}
+
+func FindInDir(root string, pattern string) ([]FileMatch, error) {
+	if pattern == "" {
+		return nil, ErrEmptyPattern
+	}
+	var fileMatch []FileMatch
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Type().IsRegular() {
+			match, err := FindInFile(path, pattern)
+			if err != nil {
+				return err
+			}
+			if len(match) > 0 {
+				fileMatch = append(fileMatch, FileMatch{Path: path, Matches: match})
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return fileMatch, nil
 }

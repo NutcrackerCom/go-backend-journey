@@ -98,9 +98,29 @@ func TestEmptyFile(t *testing.T) {
 	answer := []Match{}
 	matches, err := FindInFile(file.Name(), patern)
 	if err != nil {
-		t.Fatalf("expected nil error? got %v", err)
+		t.Fatalf("expected nil error got %v", err)
 	}
 	if !compare(matches, answer) {
 		t.Fatal("got wrong Mathes", matches)
 	}
 }
+
+//to do
+/*
+func TestEmptyDir(t *testing.T){
+	patern := "go"
+	dir, err := os.MkdirTemp("", "mini-grep-*")
+	if err != nil {
+        t.Fatalf("got error in creating dir %v", err)
+    }
+    defer os.RemoveAll(dir)
+
+	file, err := os.CreateTemp(dir, "mini-grep-*.txt")
+	if err != nil {
+		t.Fatalf("got error in openning file %v", err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+	answer := []Match{}
+}
+*/
