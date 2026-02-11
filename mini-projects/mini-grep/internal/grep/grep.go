@@ -58,7 +58,7 @@ func FindInFile(path string, pattern string) ([]Match, error) {
 	return matches, nil
 }
 
-func FindInDir(root string, pattern string) ([]FileMatch, error) {
+func FindInDir(root string, pattern string, ext string) ([]FileMatch, error) {
 	if pattern == "" {
 		return nil, ErrEmptyPattern
 	}
@@ -67,6 +67,11 @@ func FindInDir(root string, pattern string) ([]FileMatch, error) {
 		if err != nil {
 			return err
 		}
+
+		if ext != "" && filepath.Ext(path) != ext {
+			return nil
+		}
+
 		if d.Type().IsRegular() {
 			match, err := FindInFile(path, pattern)
 			if err != nil {

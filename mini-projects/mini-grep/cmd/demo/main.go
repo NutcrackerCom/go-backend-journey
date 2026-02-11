@@ -8,7 +8,7 @@ import (
 
 func main() {
 	//r := strings.NewReader("hello\ngo\nworld\ngo go\n")
-	matches, err := grep.FindInDir("", "go")
+	matches, err := grep.FindInDir("", "go", "")
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/NutcrackerCom/go-backend-journey/mini-projects/mini-grep/internal/grep"
 )
@@ -13,6 +14,7 @@ func main() {
 	pattern := flag.String("pattern", "", "substring to search (required)")
 	file := flag.String("file", "", "file path (required)")
 	dir := flag.String("dir", "", "dir path (required)")
+	ext := flag.String("ext", "", "file extension filter (example: .go)")
 	flag.Parse()
 
 	if *pattern == "" || (*file == "" && *dir == "") {
@@ -36,15 +38,24 @@ func main() {
 		}
 	}
 
+	if *ext != "" && !strings.HasPrefix(*ext, ".") {
+		*ext = "." + *ext
+	}
+
 	if *dir != "" {
-		matches, err := grep.FindInDir(*dir, *pattern)
+		*ext = strings.ToLower(*ext)
+		matches, err := grep.FindInDir(*dir, *pattern, *ext)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
 		for _, dirMatch := range matches {
+			rel, err := filepath.Rel(*dir, dirMatch.Path)
+			if err != nil {
+				rel = dirMatch.Path
+			}
 			for _, m := range dirMatch.Matches {
-				fmt.Printf("%s:%d:%s\n", dirMatch.Path, m.Line, m.Text)
+				fmt.Printf("%s:%d:%s\n", rel, m.Line, m.Text)
 			}
 		}
 	}
