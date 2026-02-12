@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/NutcrackerCom/go-backend-journey/mini-projects/mini-chat/internal/protocol"
@@ -18,11 +19,16 @@ type Client struct {
 	name string
 }
 
+type whoReq struct {
+	client *Client
+}
+
 type Hub struct {
 	join      chan *Client
 	leave     chan *Client
 	broadcast chan string
-	clients   map[*Client]bool
+	clients   map[*Client]string
+	who       chan whoReq
 }
 
 func NewHub() *Hub {
@@ -30,7 +36,8 @@ func NewHub() *Hub {
 		join:      make(chan *Client, 5),
 		leave:     make(chan *Client, 5),
 		broadcast: make(chan string, 5),
-		clients:   make(map[*Client]bool),
+		clients:   make(map[*Client]string),
+		who:       make(chan whoReq, 5),
 	}
 }
 
@@ -38,8 +45,32 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case c := <-h.join:
-			h.clients[c] = true
+			h.clients[c] = c.name
+			c.mu.RLock()
+			name := c.name
+			c.mu.RUnlock()
+			for cl := range h.clients {
+				if cl == c {
+					continue
+				}
+				select {
+				case cl.out <- fmt.Sprintf("%s joined", name):
+				default:
+				}
+			}
 		case c := <-h.leave:
+			c.mu.RLock()
+			name := c.name
+			c.mu.RUnlock()
+			for cl := range h.clients {
+				if cl == c {
+					continue
+				}
+				select {
+				case cl.out <- fmt.Sprintf("%s left", name):
+				default:
+				}
+			}
 			delete(h.clients, c)
 			close(c.out)
 			c.conn.Close()
@@ -49,6 +80,17 @@ func (h *Hub) Run() {
 				case c.out <- msg:
 				default:
 				}
+			}
+		case req := <-h.who:
+			var response []string
+			for c := range h.clients {
+				c.mu.RLock()
+				response = append(response, c.name)
+				c.mu.RUnlock()
+			}
+			select {
+			case req.client.out <- "online: " + strings.Join(response, ", "):
+			default:
 			}
 		}
 	}
@@ -95,6 +137,9 @@ func clientReader(c *Client, h *Hub) {
 				c.name = p.Arg
 				c.mu.Unlock()
 			}
+			if p.Cmd == "who" {
+				h.who <- whoReq{client: c}
+			}
 		}
 	}
 
@@ -116,6 +161,7 @@ func main() {
 		if err != nil {
 			continue
 		}
+
 		client := &Client{conn: conn, out: make(chan string, 20), name: "anonymous"}
 		hub.join <- client
 		go clientWriter(client)
