@@ -23,21 +23,33 @@ type whoReq struct {
 	client *Client
 }
 
+type message struct {
+	msg string
+	who *Client
+}
+
+type renameReq struct {
+	client *Client
+	name   string
+}
+
 type Hub struct {
 	join      chan *Client
 	leave     chan *Client
-	broadcast chan string
+	broadcast chan message
 	clients   map[*Client]string
 	who       chan whoReq
+	rename    chan renameReq
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		join:      make(chan *Client, 5),
 		leave:     make(chan *Client, 5),
-		broadcast: make(chan string, 5),
+		broadcast: make(chan message, 5),
 		clients:   make(map[*Client]string),
 		who:       make(chan whoReq, 5),
+		rename:    make(chan renameReq, 5),
 	}
 }
 
@@ -45,8 +57,8 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case c := <-h.join:
-			h.clients[c] = c.name
 			c.mu.RLock()
+			h.clients[c] = c.name
 			name := c.name
 			c.mu.RUnlock()
 			for cl := range h.clients {
@@ -76,11 +88,18 @@ func (h *Hub) Run() {
 			c.conn.Close()
 		case msg := <-h.broadcast:
 			for c := range h.clients {
+				if c == msg.who {
+					continue
+				}
 				select {
-				case c.out <- msg:
+				case c.out <- msg.msg:
 				default:
 				}
 			}
+		case name := <-h.rename:
+			name.client.mu.Lock()
+			h.clients[name.client] = name.name
+			name.client.mu.Unlock()
 		case req := <-h.who:
 			var response []string
 			for c := range h.clients {
@@ -123,7 +142,7 @@ func clientReader(c *Client, h *Hub) {
 			c.mu.RLock()
 			name := c.name
 			c.mu.RUnlock()
-			h.broadcast <- fmt.Sprintf("%s: %s", name, p.Text)
+			h.broadcast <- message{msg: fmt.Sprintf("%s: %s", name, p.Text), who: c}
 		case protocol.KindCommand:
 			if p.Cmd == "quit" {
 				select {
@@ -136,6 +155,10 @@ func clientReader(c *Client, h *Hub) {
 				c.mu.Lock()
 				c.name = p.Arg
 				c.mu.Unlock()
+				select {
+				case h.rename <- renameReq{client: c, name: c.name}:
+				default:
+				}
 			}
 			if p.Cmd == "who" {
 				h.who <- whoReq{client: c}
