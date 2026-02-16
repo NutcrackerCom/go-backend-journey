@@ -104,7 +104,7 @@ func (h *Hub) Run() {
 			var response []string
 			for c := range h.clients {
 				c.mu.RLock()
-				response = append(response, c.name)
+				response = append(response, h.clients[c])
 				c.mu.RUnlock()
 			}
 			select {
