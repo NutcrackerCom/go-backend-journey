@@ -15,34 +15,37 @@ var (
 type Service struct {
 	nextID int
 	tasks  map[int]Task
-	mu     *sync.Mutex
+	mu     sync.Mutex
 }
 
 func NewService() *Service {
 	return &Service{
 		nextID: 0,
 		tasks:  map[int]Task{},
-		mu:     &sync.Mutex{}}
+		mu:     sync.Mutex{}}
 }
 
 func (s *Service) Add(title string) (Task, error) {
 	if title == "" {
 		return Task{}, ErrEmptyText
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	task := Task{
 		ID:        s.nextID,
 		Text:      title,
 		Done:      false,
 		CreatedAt: time.Now(),
 	}
-	s.mu.Lock()
 	s.tasks[s.nextID] = task
 	s.nextID++
-	s.mu.Unlock()
 	return task, nil
 }
 
 func (s *Service) List() []Task {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	var sliceTasks []Task
 	for _, task := range s.tasks {
 		sliceTasks = append(sliceTasks, task)
@@ -55,25 +58,22 @@ func (s *Service) List() []Task {
 
 func (s *Service) Done(id int) error {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, ok := s.tasks[id]; !ok {
 		return ErrNotFound
 	}
-	s.tasks[id] = Task{
-		ID:        s.tasks[id].ID,
-		Text:      s.tasks[id].Text,
-		Done:      true,
-		CreatedAt: s.tasks[id].CreatedAt,
-	}
-	s.mu.Unlock()
+	t := s.tasks[id]
+	t.Done = true
+	s.tasks[id] = t
 	return nil
 }
 
 func (s *Service) Delete(id int) error {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, ok := s.tasks[id]; !ok {
 		return ErrNotFound
 	}
 	delete(s.tasks, id)
-	s.mu.Unlock()
 	return nil
 }
