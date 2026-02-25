@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	service := todo.NewService()
+	var service todo.Service = *todo.NewService()
 	service.Add("t0")
 	service.Add("t1")
 	service.Add("t2")
