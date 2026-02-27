@@ -2,62 +2,61 @@ package main
 
 import (
 	"fmt"
-	"sync"
-	"time"
+	"strconv"
 )
 
-func worker(nums []int64, result chan int64, wg *sync.WaitGroup) {
-	defer wg.Done()
-	var res int64 = 0
-	for _, elem := range nums {
-		res += elem
+func numToChar(num int) rune {
+	if num <= 9 {
+		return rune(96 + num)
+	} else if num <= 26 {
+		return rune(106 + num - 10)
 	}
-	result <- res
+	return rune(32)
+}
+
+func convert(char string) string {
+	elem, err := strconv.Atoi(char)
+	if err != nil {
+		return ""
+	}
+	return string(numToChar(elem))
 }
 
 func main() {
-	var numElem int64 = 100_000_000
-	var numGoroutine int64 = 100
+	var str string
+	fmt.Scan(&str)
 
-	ch := make(chan int64, numGoroutine+1)
-
-	wg := &sync.WaitGroup{}
-
-	var bigDataSlice []int64 = make([]int64, numElem+1)
-	var i int64
-	for i = 0; i <= numElem; i++ {
-		bigDataSlice[i] = i
+	if len(str) <= 2 {
+		for _, elem := range str {
+			fmt.Print(convert(string(elem)))
+		}
+		fmt.Print("\n")
+		return
 	}
 
-	timeStart := time.Now()
+	p1 := 0
+	p2 := 2
 
-	var resForce int64 = 0
+	for p2 < len(str) {
+		if str[p2] == '#' {
+			strToConv := string(str[p1]) + string(str[p1+1])
 
-	for _, elem := range bigDataSlice {
-		resForce += elem
+			fmt.Print(convert(string(strToConv)))
+			p1 += 2
+			p2 += 2
+		} else {
+			fmt.Print(convert(string(str[p1])))
+			p1++
+			p2++
+		}
+	}
+	fmt.Println(len(str) - p1)
+	if len(str)-p1 == 2 {
+		fmt.Println(convert(string(str[p1:])))
+	} else {
+		fmt.Println(convert(string(str[p1+1:])))
 	}
 
-	duration := time.Since(timeStart)
-	fmt.Println("Brute Force calc", duration, resForce)
-
-	timeStart = time.Now()
-	step := numElem / numGoroutine
-	for ind := range numGoroutine + 1 {
-		wg.Add(1)
-		start := ind * step
-		stop := min(start+step, int64(len(bigDataSlice)))
-		go worker(bigDataSlice[start:stop], ch, wg)
-	}
-
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-	var resGoroutine int64 = 0
-	for val := range ch {
-		resGoroutine += val
-	}
-	duration = time.Since(timeStart)
-	fmt.Println("Goroutine calc", duration, resGoroutine)
+	//fmt.Println(convert(string(str[p1+1:])))
 
 }
