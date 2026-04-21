@@ -1,0 +1,1 @@
+serv 2026/04/21 14:50:12 server.go:3648: http: superfluous response.WriteHeader call from github.com/NutcrackerCom/go-backend-journey/mini-projects/todo-list-server/internal/handlers.(*Handler).HandleDeleteMain (handlers.go:70)
