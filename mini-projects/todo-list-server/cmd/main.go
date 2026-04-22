@@ -18,7 +18,7 @@ func main() {
 
 	server := server.NewServer(mylog)
 	if err := server.Http.ListenAndServe(); err != nil {
-		mylog.Fatal("Error %v", err)
+		mylog.Fatalf("Error %v", err)
 		return
 	}
 }
